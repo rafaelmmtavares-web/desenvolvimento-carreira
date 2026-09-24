@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rota da Carreira: âncoras e trilhas</title>
+<style>
+:root{--bg:#f3f5fa;--ink:#1a2340;--mut:#5a6483;--navy:#131c3a;--acc:#f2a900;--ok:#1f9d6b;--bad:#d64545;--line:#dde2ee}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+header{background:var(--navy);color:#fff;padding:10px 14px;position:sticky;top:0;z-index:5}
+.top{display:flex;justify-content:space-between;max-width:820px;margin:auto;font-size:14px}
+.bar{height:8px;background:#2b3660;border-radius:8px;margin:8px auto;max-width:820px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .5s}
+.map{display:flex;gap:5px;max-width:820px;margin:auto}
+.map b{flex:1;text-align:center;padding:3px 0;border-radius:8px;background:#2b3660;font-size:12px;opacity:.55;cursor:default}
+.map b.on{background:var(--acc);color:var(--navy);opacity:1}.map b.ok{background:var(--ok);opacity:1;cursor:pointer}
+main{max-width:820px;margin:auto;padding:14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+h1{font-size:30px;margin:.2em 0}h2{font-size:21px;margin:.3em 0}
+.tag{display:inline-block;background:#fff1c7;color:#6b4c00;border-radius:99px;padding:2px 10px;font-size:13px;font-weight:600}
+.case{border-left:4px solid var(--acc);background:#fff9e8;padding:10px 12px;border-radius:6px;margin:12px 0;font-size:15px}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--acc);color:var(--navy);border:0;padding:12px 24px;border-radius:10px;font-weight:700}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.opt{display:block;width:100%;text-align:left;background:#fff;border:2px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;color:var(--ink)}
+.opt:hover{border-color:var(--acc)}.opt.ok{border-color:var(--ok);background:#e6f6ee}.opt.bad{border-color:var(--bad);background:#fdeceb}
+.fb{margin-top:8px;font-size:14px;color:var(--mut)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.chip{background:#eceff8;border:2px solid transparent;border-radius:10px;padding:8px 10px;font-size:14px;cursor:grab}
+.chip.sel{border-color:var(--acc);background:#fff1c7}
+.bk{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.zone{min-height:90px;border:2px dashed #b3bbd3;border-radius:10px;padding:8px;cursor:pointer}
+.zone h4{margin:0 0 6px;text-align:center}.zone .chip{display:block;margin:4px 0;cursor:default;background:#e6f6ee}
+.zone.over{background:#fff1c7}
+.mt{display:grid;grid-template-columns:1fr 1.5fr;gap:8px}
+.mt button{width:100%;margin-bottom:6px;border:2px solid var(--line);background:#fff;border-radius:10px;padding:8px;text-align:left;font-size:14px;color:var(--ink)}
+.mt .sel{border-color:var(--acc);background:#fff1c7}.mt .done{background:#e6f6ee;border-color:var(--ok);cursor:default}
+.fl{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.fc{min-height:120px;border-radius:12px;padding:14px;background:var(--navy);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;font-size:15px}
+.fc.back{background:#fff1c7;color:var(--ink);border:2px solid var(--acc)}
+.shake{animation:sh .3s}@keyframes sh{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+#pop{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;z-index:9;padding:20px}
+#pop div{background:#fff;border-radius:16px;padding:26px;text-align:center;max-width:340px;animation:up .3s}
+@keyframes up{from{transform:scale(.8);opacity:0}}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid var(--line);padding:6px;text-align:left}th{background:#eceff8}
+li{margin:4px 0}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<header><div class="top"><b>🧭 Rota da Carreira</b><span id="xp"></span></div><div class="bar"><i id="bar"></i></div><div class="map" id="map"></div></header>
+<main id="m"></main><div id="pop"><div></div></div>
+<script>
+const $=s=>document.querySelector(s),sh=a=>a.sort(()=>Math.random()-.5);
+const LBL={mc:'🧠 Desafio: múltipla escolha',sc:'🎭 O que você faria?',flip:'🃏 Desafio: cartões',match:'🔗 Desafio: conectar',sort:'🗂️ Desafio: classificar'};
+const P=[
+{i:'🧭',t:'Carreira: por dentro e por fora',x:100,y:'mc',
+c:'<p>A carreira tem <b>duas faces</b> (Schein, 1996):</p><table><tr><th>Interna (subjetiva)</th><th>Externa (operacional)</th></tr><tr><td>O sentido pessoal de para onde a pessoa caminha na vida profissional.</td><td>Etapas, cargos e papéis formais definidos pela organização e pela sociedade.</td></tr></table><p>Para Dutra (2017), o tema ainda é pouco percebido nas organizações, por isso mapear carreiras faz diferença.</p><p>Dutra descreve a carreira como uma <b>estrada sempre em construção pela pessoa e pela empresa</b>: olhando para trás, há escolhas e experiências; olhando para frente, alternativas e possibilidades. Ele aponta ainda uma tendência: a carreira <b>subjetiva</b> ganhando peso sobre a objetiva.</p>',
+k:'Você é estagiário(a) de RH na Alvorada Indústria (empresa fictícia). Helena, gerente de pessoas, conta que Marina, analista de compras, recusou a promoção a coordenadora. "Falta ambição?", ela pergunta.',
+d:[{q:'Como a ideia de carreira interna ajuda a entender a recusa de Marina?',o:['Ela recusou um cargo formal (carreira externa) que não combina com o rumo que sente para a própria vida profissional.','Recusar promoção prova falta de compromisso com a empresa.','Carreira interna é o mesmo que o plano de cargos da empresa.','Só existe carreira quando há promoções sucessivas.'],a:0,e:'A carreira interna é o sentido pessoal de direção; nem toda oportunidade externa combina com ele.'},
+{q:'Qual exemplo descreve a carreira EXTERNA?',o:['A sensação de que "esse trabalho tem a ver comigo".','A sequência formal analista, sênior e coordenador prevista pela empresa.','Os valores que a pessoa não abandona.','O desejo de aprender mais.'],a:1,e:'Etapas e papéis formais definidos pela organização formam a carreira externa.'}]},
+{i:'🎛️',t:'Quem conduz a carreira?',x:100,y:'sort',
+c:'<p>Dutra descreve uma mudança de referências na gestão de pessoas: no <b>modelo tradicional</b>, o foco é o controle e a pessoa é um objeto passivo do controle econômico e político da empresa. No <b>novo modelo</b>, o foco é o desenvolvimento (individual e organizacional): a pessoa gere seu desenvolvimento e sua carreira, e a empresa dá suporte.</p><p>Silva, Bispo e Ayres (2019) chamam de <b>modernos</b> os modelos como a carreira <b>proteana</b> (autodirigida, orientada por valores) e a <b>sem fronteiras</b> (mobilidade além de uma só empresa). A rota programada não some: muda a parcela de responsabilidade, que migra da organização para o indivíduo.</p>',
+k:'Helena admite que, na Alvorada, o RH sempre decidiu sozinho quem vai para onde. Ajude-a a separar o que é do modelo antigo e do novo.',
+d:{b:['Modelo tradicional','Modelo moderno'],it:[['Foco no controle das pessoas',0],['Pessoa como objeto do controle (papel passivo)',0],['Organização como única responsável pela carreira',0],['Empresa exerce controle econômico e político',0],['Foco no desenvolvimento individual e organizacional',1],['Pessoa gere seu desenvolvimento e sua carreira',1],['Empresa apoia o desenvolvimento das pessoas',1],['Carreira sem fronteiras: mobilidade além de uma só empresa',1]]}},
+{i:'🪞',t:'Autoconhecimento profissional',x:100,y:'flip',
+c:'<p>Antes de falar em trilhas, é preciso falar da pessoa. Vire os cartões para ver como Schein (1990) trata o autoconhecimento.</p><p>Para Dutra, ele é o <b>primeiro passo do plano de carreira</b>.</p>',
+k:'Caio, analista sênior de qualidade, admite: "Nunca parei para pensar no que realmente me move." Você vai ajudá-lo a nomear isso.',
+d:[['O que é autoconhecimento profissional?','A compreensão que a pessoa constrói sobre suas capacidades, necessidades, motivações e valores ao longo das experiências de trabalho.'],['Quando ele se forma?','Aos poucos: exige viver situações diferentes e receber retorno sobre o próprio desempenho. Não é imediato.'],['O que a experiência forma?','O autoconceito profissional, que passa a orientar as escolhas feitas na carreira.'],['Para que serve refletir?','Amplia a autoconsciência, ajuda a identificar prioridades e a conduzir a própria carreira.']]},
+{i:'🔍',t:'Diagnóstico do perfil',x:100,y:'sc',
+c:'<p>O perfil pode ser diagnosticado analisando as <b>experiências vividas</b> na trajetória. Schein (1990) propõe o <b>autodiagnóstico</b>: revisitar a própria história, sobretudo em <b>momentos de escolha</b> (mudança de função, promoção, busca de novos caminhos) para enxergar interesses e prioridades.</p>',
+k:'Helena quer o mapeamento de Marina, Caio e Davi (coordenador de produção) e pergunta como você vai conduzir.',
+d:[{q:'Qual abordagem você propõe?',o:['Conversar sobre a história profissional de cada um, olhando as escolhas importantes e o que as motivou.','Aplicar um teste rápido e rotular cada pessoa só pela nota.','Pedir aos chefes que descrevam o que cada um "deveria" querer.','Copiar o perfil ideal de outra empresa do setor.'],a:0,e:'O diagnóstico parte da história de quem é analisado: as escolhas passadas revelam prioridades.'}]},
+{i:'⚓',t:'O que é uma âncora de carreira',x:100,y:'mc',
+c:'<p>Âncora é o <b>autoconceito profissional</b>, formado por três elementos:</p><p>🎯 talentos e capacidades percebidos<br>💎 valores básicos<br>🔥 motivos e necessidades ligados à carreira (o mais importante)</p><p>Ela surge com a experiência e estabiliza a pessoa: é aquilo de que ela <b>não abre mão</b> quando precisa escolher. Costumamos percebê-la diante de decisões (Schein, 1996). Serve para orientar escolhas e avaliar o encaixe entre pessoa e ambiente.</p>',
+k:'Davi foi convidado a assumir uma fábrica em outra cidade e recusou, mesmo com aumento.',
+d:[{q:'O que a recusa de Davi sugere?',o:['Que ele tocou em algo de que não abre mão, uma pista da sua âncora.','Que ele não tem talento para liderar.','Que âncoras mudam a cada oferta recebida.','Que a âncora depende apenas do salário.'],a:0,e:'Escolhas difíceis fazem a âncora aparecer. Ela é uma força estabilizadora, não muda a cada proposta.'},
+{q:'Qual NÃO é um dos três elementos da âncora?',o:['Talentos e capacidades percebidos','Valores básicos','Motivos e necessidades da carreira','Cargo atual e salário do momento'],a:3,e:'Cargo e salário são a carreira externa; a âncora é o autoconceito.'}]},
+{i:'🎯',t:'As oito âncoras',x:100,y:'match',
+c:'<p>Schein identificou <b>oito âncoras</b>. As cinco primeiras vieram das pesquisas dos anos 1970; nos anos 1980 foram somadas serviço ou causa, desafio e estilo de vida (Schein, 1996).</p>',
+k:'Você vai montar o cartão-resumo que Helena usará nas conversas.',
+d:[['Autonomia/Independência','Quer definir o próprio ritmo e depender pouco de organizações e regras alheias.'],['Segurança/Estabilidade','Busca previsibilidade no emprego e na renda.'],['Competência técnica/funcional','Gosta de ser reconhecido como especialista pelo domínio de um campo.'],['Competência gerencial','Quer analisar, integrar pessoas e decidir mesmo com informação parcial.'],['Criatividade empreendedora','Quer criar algo novo: produto, serviço ou o próprio negócio.'],['Serviço ou dedicação a uma causa','Precisa que o trabalho tenha sentido em um contexto maior.'],['Desafio pessoal','Vibra em superar obstáculos quase impossíveis e vencer competidores.'],['Estilo de vida','Integra carreira, família e vida pessoal em um todo coerente.']]},
+{i:'🌐',t:'Âncoras no mundo atual',x:100,y:'sc',
+c:'<p>O trabalho mudou (Schein, 1996): da <b>segurança no emprego</b> para a <b>empregabilidade</b>. A empresa oferece aprendizado e experiência, e a segurança passa a depender mais da própria pessoa. Autonomia e estilo de vida ganharam peso.</p><p>Uma âncora costuma pesar mais, mas a mesma carreira atende várias necessidades. Estudos recentes sugerem que <b>múltiplas âncoras</b> podem coexistir.</p><p>Dutra lembra, a partir de Schein, que três ciclos pressionam a pessoa ao longo da vida: o <b>biossocial</b>, o <b>profissional</b> e o <b>familiar</b>.</p>',
+k:'A Alvorada anuncia que não garante emprego vitalício, mas oferecerá cursos e projetos. Marina, de âncora segurança/estabilidade, fica apreensiva.',
+d:[{q:'Que orientação você dá a Marina?',o:['Construir segurança em si mesma: aprender continuamente e manter-se empregável, aproveitando os cursos.','Esperar a empresa voltar a garantir emprego para a vida toda.','Trocar de âncora, já que segurança deixou de existir.','Ignorar o anúncio, pois âncora não tem relação com o contexto.'],a:0,e:'Com a lógica de empregabilidade, a base da segurança sai da organização e vai para a pessoa.'}]},
+{i:'🗺️',t:'Plano de carreira e armadilhas',x:100,y:'sort',
+c:'<p>Ter um <b>projeto profissional consciente</b> amplia a visão de oportunidades; sem ele, a visão se restringe (Dutra). As etapas do plano: <b>autoconhecimento, conhecimento do mercado, objetivos de carreira, estratégia de implementação, plano de ação e acompanhamento</b>.</p><p>Quatro estratégias: ampliar a área na empresa atual, mudar de ocupação na empresa, mudar de empresa mantendo a ocupação, ou mudar de empresa e de ocupação.</p><p>Cuidado com as <b>armadilhas</b>, atraentes por suas iscas (dinheiro, status, pressão de amigos e familiares): <b>beco sem saída</b>, <b>insatisfação</b>, <b>caminho errado</b> e <b>desgaste da imagem</b>.</p>',
+k:'Davi recebeu um convite tentador: aumento e status, mas para uma área que não lhe interessa. Classifique os riscos que você enxerga.',
+d:{b:['Beco sem saída','Insatisfação','Caminho errado','Desgaste da imagem'],it:[['Dominar uma técnica que está ficando obsoleta',0],['Especializar-se só no processo de uma única empresa',0],['Atividades que exploram justamente os pontos fracos',1],['Área de alto estresse e nenhuma realização',1],['Promoção para área de nenhum interesse pessoal',2],['Transferência para empresa sem perspectiva de realização',2],['Empresa exposta a escândalos por instabilidade dos dirigentes',3],['Empresa com problemas de imagem no mercado',3]]}},
+{i:'📈',t:'Competências e agregação de valor',x:100,y:'sc',
+c:'<p>Para Dutra, competência é o conjunto de <b>conhecimentos, habilidades e atitudes</b> que, mobilizados, geram <b>entrega e agregação de valor</b>. Os <b>níveis de complexidade</b> das atribuições organizam a carreira e se distinguem por nível de atuação, abrangência, escopo de responsabilidade, grau de estruturação das atividades, tratamento da informação (de coletar a decidir) e autonomia.</p><p>Há <b>bem-estar</b> quando capacidades e desafios se equilibram (Stamp, 1989, adaptado por Dutra): capacidade demais gera aborrecimento e frustração; desafio demais gera ansiedade e medo. A carreira estruturada por competências tem eixos gerenciais e profissionais (técnicos), cada um com seus níveis.</p>',
+k:'Caio, o sênior de qualidade, anda entediado: as tarefas são rotineiras e muito abaixo do que ele sabe fazer.',
+d:[{q:'Como interpretar o tédio de Caio?',o:['Suas capacidades superam a complexidade do trabalho; a saída é ampliar atribuições e responsabilidades.','Falta de atitude: trocar de cargo não resolveria.','Basta aumentar a remuneração, sem mudar as atribuições.','Ele deve buscar tarefas ainda mais padronizadas e rotineiras.'],a:0,e:'Capacidade acima do desafio leva a aborrecimento. A resposta é ajustar a complexidade ao que a pessoa entrega.'},
+{q:'Qual conjunto ajuda a diferenciar níveis de complexidade?',o:['Escopo, abrangência, estruturação das atividades, tratamento da informação e autonomia.','Idade, tempo de casa e horário de trabalho.','Apenas o título do cargo.','Apenas o salário atual.'],a:0,e:'Essas variáveis diferenciadoras, apresentadas por Dutra, descrevem a complexidade real das atribuições.'}]},
+{i:'🔀',t:'Trilha de carreira em Y',x:100,y:'mc',
+c:'<p>A literatura recente critica trajetórias longas, lineares e únicas: contextos sem fronteiras e múltiplas carreiras pedem percursos flexíveis.</p><p>A <b>trilha em Y</b> nasceu para romper a ideia de que subir é gerir pessoas (o que não serve a todos). Há um <b>tronco comum</b> para construir a base técnica e, na <b>bifurcação</b> (normalmente analista sênior), empresa e profissional avaliam perfil, desempenho e interesse e definem o ramo <b>gerencial</b> ou <b>técnico</b>.</p><p>No setor público, Pires et al. (2005), citados por Silva, Bispo e Ayres (2019), propõem uma estrutura em Y para que cargos de confiança sejam ocupados por servidores com competências gerenciais ou técnicas.</p>',
+k:'Caio é excelente tecnicamente, mas não quer gerir pessoas. Na Alvorada, o único jeito de crescer é virar chefe.',
+d:[{q:'Como a trilha em Y resolve o caso de Caio?',o:['Na bifurcação, ele e a empresa avaliam o perfil e ele pode seguir o ramo técnico sem virar gestor.','Obrigando todos a passar primeiro pelo ramo gerencial.','Eliminando o tronco comum e a base técnica.','Permitindo alternar livremente entre os ramos a qualquer momento.'],a:0,e:'A última opção descreve a trilha W. Na Y a decisão é pontual, na bifurcação.'},
+{q:'Qual é o principal risco da trilha em Y?',o:['Falta de profundidade e inconsistência de critérios.','Escolha precoce ou equivocada, com baixa reversibilidade.','Complexidade alta para o RH.','Ausência total de previsibilidade.'],a:1,e:'As outras opções são características da trilha W.'}]},
+{i:'🔁',t:'Trilha de carreira em W',x:100,y:'sort',
+c:'<p>A dicotomia técnico × gerencial pode ser insuficiente diante da volatilidade do mercado. Na <b>trilha em W</b>, há duas ou mais trilhas em paralelo e é possível <b>transitar ou combinar</b> os ramos técnico e gerencial, conciliando as necessidades da organização e as da pessoa.</p>',
+k:'Davi gosta de alternar entre liderar a equipe e mergulhar em projetos técnicos. Ajude Helena a comparar as trilhas.',
+d:{b:['Trilha Y','Trilha W'],it:[['Tronco comum e bifurcação única',0],['Duas ou mais trilhas em paralelo',1],['Decisão pontual, tomada em um momento',0],['Decisão contínua, revisável ao longo da vida',1],['Perfil resultante: gestor ou especialista',0],['Perfil resultante: híbrido e versátil',1],['Contexto ideal: estruturas estáveis e cargos bem definidos',0],['Contexto ideal: ambientes dinâmicos, de conhecimento e projetos',1],['Risco: escolha precoce ou equivocada',0],['Risco: falta de profundidade e inconsistência de critérios',1]]}},
+{i:'👑',t:'Chefão: o relatório para Helena',x:200,y:'mc',
+c:'<p><b>Resumo da jornada</b></p><ul><li>Carreira tem face <b>interna</b> (sentido pessoal) e <b>externa</b> (cargos e etapas formais).</li><li>O autoconhecimento se constrói com experiência, e o <b>autodiagnóstico</b> parte da história e das escolhas.</li><li>A <b>âncora</b> reúne talentos, valores e motivos/necessidades: é o que não se abandona. São <b>oito</b>, e várias podem coexistir.</li><li>Na lógica da <b>empregabilidade</b>, a segurança depende mais de si.</li><li>A <b>trilha Y</b> bifurca uma vez (gestor ou especialista). A <b>W</b> permite transitar e combinar, com mais complexidade para o RH.</li><li>No <b>novo modelo</b>, a pessoa conduz a carreira e a empresa apoia. O <b>plano de carreira</b> ajuda a evitar armadilhas.</li><li>Competências (conhecimentos, habilidades e atitudes) geram <b>agregação de valor</b>, e a complexidade das atribuições organiza os níveis.</li></ul>',
+k:'Hora de entregar: relacione perfil, âncora e trilha dos três colaboradores.',
+d:[{q:'Qual afirmação resume o novo modelo de gestão de carreira descrito por Dutra?',o:['A pessoa assume papel ativo na gestão do seu desenvolvimento e carreira, e a empresa apoia esse desenvolvimento.','A empresa controla a carreira de todos e a pessoa apenas segue.','A empresa deixa de ter qualquer papel no desenvolvimento das pessoas.','A carreira deixa de ter qualquer estrutura ou etapas.'],a:0,e:'O foco migra do controle para o desenvolvimento, com responsabilidade compartilhada.'},{q:'Marina (âncora segurança/estabilidade) atua em uma área de cargos bem definidos. Que hipótese é coerente?',o:['Trilha Y: ambiente estável e previsível, com decisão pontual, e apoio para que sua segurança venha da empregabilidade.','Trilha W, porque toda âncora de segurança exige alternar de ramo o tempo todo.','Nenhuma trilha: âncora de segurança dispensa planejamento de carreira.','Trilha W, porque ambientes estáveis exigem máxima flexibilidade.'],a:0,e:'A trilha Y combina com estruturas estáveis e cargos bem definidos.'},
+{q:'Caio (âncora técnica/funcional) não quer gerir pessoas. O que o relatório propõe?',o:['Ramo técnico após a bifurcação (Y), com reconhecimento como especialista.','Promovê-lo a gestor, única forma de reconhecer alto desempenho.','Manter o cargo atual sem trilha alguma.','Aplicar o mesmo perfil de Marina.'],a:0,e:'A trilha Y existe justamente para não tornar a gestão o único caminho de ascensão.'},
+{q:'Davi alterna entre liderar e atuar tecnicamente, em um ambiente de projetos. Qual conclusão é mais coerente?',o:['Perfil híbrido: a trilha W tende a servir melhor, desde que haja regras claras de transição.','Trilha Y, pois decisão contínua é desvantagem para todos.','Como só há uma âncora, não é preciso pensar em trilha.','Na trilha W qualquer transição vale, sem critérios.'],a:0,e:'A W tem alta reversibilidade se houver regras claras; sem critérios, o risco é inconsistência.'},
+{q:'Qual sequência resume o método do seu relatório?',o:['História e escolhas, depois âncoras (talentos, valores, motivos), depois hipótese de trilha Y ou W, revisável.','Cargo desejado, depois salário, depois trilha.','Trilha definida pela empresa, depois âncora ajustada ao cargo.','Teste único, âncora fixa para sempre, depois cargo.'],a:0,e:'Do autoconhecimento para a âncora e, só então, para a trilha, sempre revisável.'}]}
+];
+const R={};let mem={},cur=-1;
+function ld(){try{return JSON.parse(localStorage.getItem('rota2'))||{}}catch(e){return mem}}
+let S=Object.assign({d:0,xp:0},ld());
+function sv(){try{localStorage.setItem('rota2',JSON.stringify(S))}catch(e){mem=S}}
+function hdr(){$('#xp').textContent='⭐ '+S.xp+' XP';$('#bar').style.width=Math.round(S.d/P.length*100)+'%';
+$('#map').innerHTML=P.map((p,i)=>'<b class="'+(i<S.d?'ok':i==cur?'on':'')+'" onclick="go('+i+')" title="'+p.t+'">'+(i<S.d?'✓':p.i)+'</b>').join('')}
+function go(i){if(i<S.d){cur=i;show()}}
+function cover(){cur=-1;hdr();const s=S.d>0;
+$('#m').innerHTML='<div class="card"><span class="tag">Aula interativa • Estágio</span><h1>Rota da Carreira</h1><p>Âncoras e trilhas de carreira, com base em Schein (1990, 1996) Dutra (2017 e apresentações) e Silva, Bispo e Ayres (2019).</p><div class="case">🏢 Você é estagiário(a) de RH na <b>Alvorada Indústria</b>, empresa fictícia. Helena, gerente de pessoas, pediu ajuda para mapear três carreiras: <b>Marina</b> (compras), <b>Caio</b> (qualidade) e <b>Davi</b> (produção).</div><p>'+P.length+' fases, cada uma com conteúdo curto e um desafio. Resolva para desbloquear a próxima.</p><button class="btn" onclick="start()">'+(s?'Continuar':'Começar')+'</button></div>'}
+function start(){if(S.d>=P.length)fim();else{cur=S.d;show()}}
+function show(){hdr();const p=P[cur];
+$('#m').innerHTML='<div class="card"><span class="tag">Fase '+(cur+1)+' de '+P.length+'</span><h2>'+p.i+' '+p.t+'</h2>'+p.c+'<div class="case">🏢 '+p.k+'</div></div><div class="card"><span class="tag">'+LBL[p.y]+'</span><div id="ch"></div></div><div style="text-align:center"><button class="btn" id="nx" disabled>'+(cur==P.length-1?'Ver conquista final':'Próxima fase')+'</button></div>';
+$('#nx').onclick=()=>{cur++;cur>=P.length?fim():show();scrollTo(0,0)};R[p.y](p.d,fin);scrollTo(0,0)}
+function fin(){const p=P[cur];$('#nx').disabled=false;if(cur==S.d){S.d++;S.xp+=p.x;sv();hdr();
+$('#pop div').innerHTML='<div style="font-size:46px">🏆</div><h2>Conquista desbloqueada!</h2><p>'+p.i+' <b>'+p.t+'</b></p><p>+'+p.x+' XP</p><button class="btn" onclick="cp()">Continuar</button>';$('#pop').style.display='flex'}}
+function cp(){$('#pop').style.display='none'}
+function fim(){cur=P.length;hdr();
+$('#m').innerHTML='<div class="card"><div style="font-size:46px">👑</div><h1>Relatório entregue!</h1><p>Você concluiu a jornada com <b>'+S.xp+' XP</b>. Helena já tem o que precisa para conversar com Marina, Caio e Davi.</p><h2>Referências</h2><p>DUTRA, Joel S. <b>Gestão de carreiras: a pessoa, a organização e as oportunidades</b>. 2. ed. Rio de Janeiro: Atlas, 2017.</p><p>SCHEIN, Edgar H. <b>Career anchors revisited: implications for career development in the 21st century</b>. Cambridge: MIT Sloan School of Management, 1996.</p><p>SCHEIN, Edgar H. <b>Career anchors and job/role planning: the links between career pathing and career development</b>. Cambridge: MIT Sloan School of Management, 1990.</p><p>DUTRA, Joel S. <b>Os desafios na gestão da carreira e do desenvolvimento profissional</b>. Apresentação, s.d.</p><p>DUTRA, Joel S. <b>Gestão de pessoas por competências</b>. Apresentação no 2º Congresso de Gestão do Ministério Público, s.d.</p><p>SILVA, Anielson B. da; BISPO, Ana Carolina K. de A.; AYRES, Simone M. P. M. <b>Desenvolvimento de carreiras por competências</b>. Brasília: Enap, 2019.</p><p>Roteiro do Grupo 9, Estágio I (UPE/FCAP), material de apoio.</p><button class="btn" onclick="S={d:0,xp:0};sv();cover()">↺ Recomeçar</button></div>'}
+R.sc=R.mc=(d,done)=>{let q=0;const el=$('#ch');
+const draw=()=>{const Q=d[q];let ok=false;
+el.innerHTML='<p><b>'+Q.q+'</b></p>'+sh([...Q.o.keys()]).map(j=>'<button class="opt" data-j="'+j+'">'+Q.o[j]+'</button>').join('')+'<div class="fb"></div>';
+const fb=el.querySelector('.fb');
+el.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(ok||b.disabled)return;
+if(+b.dataset.j==Q.a){ok=true;b.classList.add('ok');fb.innerHTML='✅ '+Q.e;
+if(q<d.length-1){fb.insertAdjacentHTML('afterend','<button class="btn" id="nq" style="margin-top:10px">Próxima pergunta</button>');$('#nq').onclick=()=>{q++;draw()}}else done()}
+else{b.classList.add('bad','shake');b.disabled=true;fb.textContent='❌ Ainda não. Releia o conteúdo da fase e tente outra opção.'}})};
+draw()};
+R.flip=(d,done)=>{const el=$('#ch'),seen=new Set();
+el.innerHTML='<p>Toque em cada cartão para revelar a resposta. Vire todos para avançar.</p><div class="fl"></div>';
+d.forEach(([f,b],i)=>{const c=document.createElement('div');c.className='fc';c.textContent='❓ '+f;let s=false;
+c.onclick=()=>{s=!s;c.classList.toggle('back',s);c.textContent=s?b:'❓ '+f;seen.add(i);if(seen.size==d.length&&!el.dataset.f){el.dataset.f=1;done()}};
+el.querySelector('.fl').appendChild(c)})};
+R.match=(d,done)=>{const el=$('#ch');let a=null,b=null,left=d.length;
+el.innerHTML='<p>Toque em um conceito e depois na definição correspondente.</p><div class="mt"><div id="ml"></div><div id="mr"></div></div><div class="fb"></div>';
+const fb=el.querySelector('.fb');
+const mk=(box,items,side)=>sh(items.map((x,i)=>[x,i])).forEach(([x,i])=>{const bt=document.createElement('button');bt.textContent=x;bt.dataset.i=i;
+bt.onclick=()=>{if(bt.classList.contains('done'))return;
+if(side==0){if(a)a.classList.remove('sel');a=bt}else{if(b)b.classList.remove('sel');b=bt}
+bt.classList.add('sel');
+if(a&&b){if(a.dataset.i==b.dataset.i){a.className='done';b.className='done';a=b=null;fb.textContent='✅ Par correto!';if(--left==0){fb.textContent='✅ Cartão-resumo completo!';done()}}
+else{fb.textContent='❌ Esses não combinam. Tente de novo.';[a,b].forEach(x=>{x.classList.remove('sel');x.classList.add('shake');setTimeout(()=>x.classList.remove('shake'),400)});a=b=null}}};
+$(box).appendChild(bt)});
+mk('#ml',d.map(x=>x[0]),0);mk('#mr',d.map(x=>x[1]),1)};
+R.sort=(d,done)=>{const el=$('#ch');let sel=null,left=d.it.length;
+el.innerHTML='<p>Toque em um item e depois na categoria certa (ou arraste até ela).</p><div class="chips" id="pool"></div><div class="bk">'+d.b.map((b,i)=>'<div class="zone" data-z="'+i+'"><h4>'+b+'</h4></div>').join('')+'</div><div class="fb"></div>';
+const pool=$('#pool'),fb=el.querySelector('.fb');
+sh([...d.it]).forEach(([t,z])=>{const c=document.createElement('div');c.className='chip';c.textContent=t;c.draggable=true;c.dataset.z=z;
+c.onclick=()=>{if(sel)sel.classList.remove('sel');sel=c;c.classList.add('sel')};
+c.ondragstart=e=>{sel=c;e.dataTransfer.setData('text','x')};pool.appendChild(c)});
+el.querySelectorAll('.zone').forEach(z=>{
+const put=()=>{if(!sel)return;
+if(sel.dataset.z==z.dataset.z){sel.classList.remove('sel');sel.draggable=false;sel.onclick=null;z.appendChild(sel);sel=null;fb.textContent='✅ Isso mesmo!';if(--left==0){fb.textContent='✅ Tudo classificado!';done()}}
+else{const s=sel;s.classList.add('shake');fb.textContent='❌ Esse item pertence a outra categoria. Releia o conteúdo da fase.';setTimeout(()=>s.classList.remove('shake'),400)}};
+z.onclick=put;z.ondragover=e=>{e.preventDefault();z.classList.add('over')};z.ondragleave=()=>z.classList.remove('over');
+z.ondrop=e=>{e.preventDefault();z.classList.remove('over');put()}})};
+cover();
+</script></body></html>
